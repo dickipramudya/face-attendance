@@ -1,0 +1,24 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Runtime data — faces, snapshots, database, settings (NEVER commit: contains personal data)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Models — download from the OpenCV Zoo into ./models
+models/
+*.onnx
+
+# Video editing scratch + large renders (not part of the code)
+video/
+*.mp4
+*.trf
+*.log.mbtree
+
+# OS / editor
+.DS_Store
+Thumbs.db

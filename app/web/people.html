@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>People · Face Attendance</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+  <div style="display:flex; align-items:center; gap:12px">
+    <h1 style="flex:1">Registered people</h1>
+    <a class="btn" href="/register">+ Register</a>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th></th><th>Name</th><th>ID</th><th>Department / class</th><th>Photos</th><th>Registered</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+<script src="/static/common.js"></script>
+<script>
+header("/people");
+async function load() {
+  const people = await (await fetch("/api/people")).json();
+  document.getElementById("rows").innerHTML = people.length ? people.map(p => `
+    <tr>
+      <td>${p.photo ? `<img src="/data/${esc(p.photo)}">` : ""}</td>
+      <td><b>${esc(p.name)}</b></td><td>${esc(p.emp_no)}</td><td>${esc(p.dept)}</td>
+      <td>${p.faces}</td><td class="muted">${new Date(p.created_at * 1000).toLocaleDateString("en-GB")}</td>
+      <td><button class="danger" data-name="${esc(p.name)}" onclick="del(${p.id}, this.dataset.name)">Delete</button></td>
+    </tr>`).join("") : `<tr><td colspan="7" class="muted">Nobody registered yet.</td></tr>`;
+}
+async function del(id, name) {
+  if (!confirm(`Delete ${name}? Their face data, photos and attendance history are removed.`)) return;
+  await fetch("/api/people/" + id, { method: "DELETE" });
+  load();
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live · Face Attendance</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+  <div class="grid cams" id="cams"></div>
+
+  <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top: 16px" id="lower">
+    <div class="card">
+      <h2>Latest check-ins & check-outs</h2>
+      <div class="events" id="events"><span class="muted">Nobody yet today.</span></div>
+    </div>
+    <div class="card" id="insideCard">
+      <h2>Inside now</h2>
+      <div id="inside" class="muted">—</div>
+    </div>
+  </div>
+</main>
+<script src="/static/common.js"></script>
+<script>
+header("/");
+let built = false;
+
+function buildCams(st) {
+  const role = c => st.mode !== "gate" ? ["scan", "SCAN"] : c.role === "out" ? ["out", "CHECK-OUT"] : ["in", "CHECK-IN"];
+  document.getElementById("cams").innerHTML = st.cameras.map(c => {
+    const [cls, txt] = role(c);
+    return `<div class="card cam">
+      <img src="/stream/${c.id}" alt="${esc(c.name)}">
+      <span class="tag ${cls}">${txt} · ${esc(c.name)}</span>
+      <span class="meta" id="meta-${c.id}"></span>
+    </div>`;
+  }).join("");
+  if (st.mode !== "gate") document.getElementById("insideCard").style.display = "none";
+  built = true;
+}
+
+async function refresh() {
+  const st = await (await fetch("/api/state")).json();
+  if (!built) buildCams(st);
+  st.cameras.forEach(c => {
+    const m = document.getElementById("meta-" + c.id);
+    if (m) m.textContent = c.status === "live" ? `${c.faces} face${c.faces === 1 ? "" : "s"} · ${c.fps} fps` : c.status;
+  });
+  const ev = st.recent;
+  document.getElementById("events").innerHTML = ev.length ? ev.map(e => `
+    <div class="ev">
+      <img src="/data/${esc(e.snapshot)}" alt="">
+      <div><b>${esc(e.name)}</b>
+        <span class="badge ${e.kind}">${e.kind === "in" ? "IN" : "OUT"} ${e.time}</span>
+        ${e.late_min ? `<span class="late"> late ${e.late_min} min</span>` : ""}
+        <div class="muted" style="font-size:12px">${esc(e.camera)} · ${(e.score * 100).toFixed(0)}% match</div>
+      </div>
+    </div>`).join("") : `<span class="muted">Nobody yet today.</span>`;
+  document.getElementById("inside").innerHTML = st.inside.length
+    ? st.inside.map(p => `<div style="margin:6px 0"><b>${esc(p.name)}</b> <span class="muted">since ${p.first_in}</span></div>`).join("")
+    : "Nobody inside.";
+}
+refresh(); setInterval(refresh, 1500);
+</script>
+</body>
+</html>

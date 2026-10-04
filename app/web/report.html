@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report · Face Attendance</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+  <div style="display:flex; align-items:end; gap:12px; flex-wrap:wrap">
+    <h1 style="flex:1">Daily attendance</h1>
+    <div><label>Day</label><input type="date" id="day"></div>
+    <div><label>Export from</label><input type="date" id="from"></div>
+    <div><label>to</label><input type="date" id="to"></div>
+    <button id="csv">⬇ CSV</button>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="muted" id="summary" style="margin-bottom:8px"></div>
+    <table>
+      <thead><tr><th></th><th>Name</th><th>ID</th><th>Department / class</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+<script src="/static/common.js"></script>
+<script>
+header("/report");
+const iso = d => d.toISOString().slice(0, 10);
+const day = document.getElementById("day");
+const now = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+day.value = iso(now); document.getElementById("to").value = iso(now);
+document.getElementById("from").value = iso(new Date(now.getTime() - 6 * 864e5));
+
+async function load() {
+  const { rows } = await (await fetch("/api/report?day=" + day.value)).json();
+  const present = rows.filter(r => r.status !== "Absent").length;
+  const late = rows.filter(r => r.status.startsWith("Late")).length;
+  document.getElementById("summary").textContent = `${present} of ${rows.length} present · ${late} late`;
+  const color = s => s === "On time" ? "var(--green)" : s.startsWith("Late") ? "var(--amber)" : "var(--muted)";
+  document.getElementById("rows").innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.photo ? `<img src="/data/${esc(r.photo)}">` : ""}</td>
+      <td><b>${esc(r.name)}</b></td><td>${esc(r.emp_no)}</td><td>${esc(r.dept)}</td>
+      <td>${r.first_in || "—"}</td><td>${r.last_out || "—"}</td>
+      <td style="color:${color(r.status)}">${esc(r.status)}</td>
+    </tr>`).join("") || `<tr><td colspan="7" class="muted">Nobody registered yet.</td></tr>`;
+}
+day.onchange = load; load(); setInterval(load, 5000);
+document.getElementById("csv").onclick = () =>
+  location.href = `/api/report.csv?day_from=${document.getElementById("from").value}&day_to=${document.getElementById("to").value}`;
+</script>
+</body>
+</html>

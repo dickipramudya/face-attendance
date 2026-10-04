@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register · Face Attendance</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+  <h1>Register a person</h1>
+  <div class="grid two">
+    <div class="card">
+      <form id="f">
+        <label>Full name *</label><input name="name" required>
+        <div class="row">
+          <div><label>ID number</label><input name="emp_no" placeholder="EMP-001 / student no."></div>
+          <div><label>Department / class</label><input name="dept"></div>
+        </div>
+        <label>Phone</label><input name="phone">
+
+        <h2 style="margin-top:20px">Face photos <span class="muted" id="count">(0 of 5)</span></h2>
+        <div class="shots" id="shots"><span class="muted">One clear photo is enough; three (straight, slightly left, slightly right) recognise better.</span></div>
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+          <button type="button" id="snap">📷 Take photo from camera</button>
+          <label class="btn" style="margin:0">⬆ Upload photo<input type="file" id="upload" accept="image/*" multiple hidden></label>
+          <button type="button" id="clear">Clear photos</button>
+        </div>
+        <div class="msg" id="photoMsg"></div>
+
+        <label class="check"><input type="checkbox" name="consent" value="yes" required>
+          <span>This person agrees that their face is stored on this device and used only for attendance.
+          It can be deleted at any time from the People page.</span></label>
+
+        <div style="margin-top:18px"><button class="primary" id="save" disabled>Save person</button></div>
+        <div class="msg" id="saveMsg"></div>
+      </form>
+    </div>
+    <div class="card cam" style="align-self:start">
+      <div style="padding:12px 16px; display:flex; gap:10px; align-items:center">
+        <span class="muted">Camera</span><select id="cam" style="width:auto"></select>
+      </div>
+      <img id="live" alt="camera">
+    </div>
+  </div>
+</main>
+<script src="/static/common.js"></script>
+<script>
+header("/register");
+const tokens = [];
+const shots = document.getElementById("shots");
+const photoMsg = document.getElementById("photoMsg");
+
+fetch("/api/state").then(r => r.json()).then(st => {
+  const sel = document.getElementById("cam");
+  sel.innerHTML = st.cameras.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  const show = () => document.getElementById("live").src = "/stream/" + sel.value;
+  sel.onchange = show; show();
+});
+
+function updateCount() {
+  document.getElementById("count").textContent = `(${tokens.length} of 5)`;
+  document.getElementById("save").disabled = tokens.length < 1;
+}
+
+function addShot(res) {
+  if (tokens.length === 0) shots.innerHTML = "";
+  tokens.push(res.token);
+  shots.insertAdjacentHTML("beforeend", `<img src="${res.image}" alt="face">`);
+  updateCount();
+}
+
+const hint = () => tokens.length < 3 ? ` ${tokens.length} of 3 recommended, you can save now or add more.` : " You can save now.";
+
+document.getElementById("snap").onclick = async () => {
+  if (tokens.length >= 5) return showMsg(photoMsg, "5 photos is plenty.", false);
+  showMsg(photoMsg, "Looking for a face…", true);
+  const r = await fetch("/api/capture/" + document.getElementById("cam").value, { method: "POST" });
+  const j = await r.json();
+  if (!r.ok) return showMsg(photoMsg, j.error || j.detail, false);
+  addShot(j); showMsg(photoMsg, "Face captured ✓" + hint(), true);
+};
+
+document.getElementById("upload").onchange = async e => {
+  const files = [...e.target.files].slice(0, 5 - tokens.length);
+  e.target.value = "";
+  const errors = [];
+  for (const [i, file] of files.entries()) {
+    showMsg(photoMsg, `Checking photo ${i + 1} of ${files.length}…`, true);
+    const fd = new FormData(); fd.append("photo", file);
+    try {
+      const r = await fetch("/api/upload-photo", { method: "POST", body: fd });
+      const j = await r.json();
+      r.ok ? addShot(j) : errors.push(`${file.name}: ${j.error || j.detail}`);
+    } catch (err) {
+      errors.push(`${file.name}: upload failed (${err.message})`);
+    }
+  }
+  if (errors.length) showMsg(photoMsg, errors.join("\n"), false);
+  else if (files.length) showMsg(photoMsg, `${files.length} photo${files.length > 1 ? "s" : ""} added ✓` + hint(), true);
+  else showMsg(photoMsg, "5 photos is plenty.", false);
+};
+
+document.getElementById("clear").onclick = () => {
+  tokens.length = 0;
+  shots.innerHTML = `<span class="muted">One clear photo is enough; three recognise better.</span>`;
+  updateCount();
+};
+
+document.getElementById("f").onsubmit = async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  fd.set("tokens", tokens.join(","));
+  const r = await fetch("/api/people", { method: "POST", body: fd });
+  const j = await r.json();
+  const msg = document.getElementById("saveMsg");
+  if (!r.ok) return showMsg(msg, j.detail, false);
+  showMsg(msg, `${fd.get("name")} is registered. They will be recognised from now on.`, true);
+  e.target.reset(); document.getElementById("clear").onclick();
+};
+</script>
+</body>
+</html>
