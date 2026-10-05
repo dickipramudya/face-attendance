@@ -1,5 +1,6 @@
 import sys, time
-sys.path.insert(0, "/opt/absensi")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import cv2, numpy as np
 from app.face import FaceEngine
 from app import config

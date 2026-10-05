@@ -1,4 +1,4 @@
-# Face-Recognition Attendance on a $30 Linux TV Box
+# Face-Recognition Attendance on a Linux Device
 
 Offline face-recognition attendance that runs entirely on a repurposed Android TV box
 (Amlogic, 4× Cortex-A53, 2 GB RAM) flashed with Armbian Linux, using ordinary USB webcams.
@@ -85,16 +85,20 @@ photos, snapshots and attendance history. Screenshots in this repo use only the 
 
 ## Run / deploy
 
+Download the two models from the OpenCV Zoo into `./models`:
+
+- `face_detection_yunet_2023mar.onnx` — [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
+- `face_recognition_sface_2021dec.onnx` — [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface)
+
+Then, from the repository root on the box (Armbian):
+
 ```bash
-# on the box (Armbian)
 python3 -m venv venv
 venv/bin/pip install opencv-python fastapi uvicorn python-multipart pillow
-# place the YuNet + SFace .onnx models in ./models (OpenCV Zoo)
-
 venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8090
-# then open http://<box-ip>:8090
 ```
 
+Open `http://<box-ip>:8090`. The database, photos and settings are stored in `./data`.
 A `systemd` unit runs it on boot. The HDMI monitor shows the dashboard only while a monitor is
 connected; otherwise use the web UI.
 

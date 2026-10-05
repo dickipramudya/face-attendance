@@ -1,6 +1,7 @@
 """Times each per-frame stage on the box, with the service stopped."""
 import sys, time
-sys.path.insert(0, "/opt/absensi")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import cv2
 from app.face import FaceEngine
 from app import render

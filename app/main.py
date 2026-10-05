@@ -1,6 +1,6 @@
 """Face attendance server: cameras, recognition, monitor output and web UI.
 
-    /opt/absensi/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8090
+    venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8090
 """
 import asyncio
 import base64

@@ -3,7 +3,7 @@ import json
 import threading
 from pathlib import Path
 
-BASE = Path("/opt/absensi")
+BASE = Path(__file__).resolve().parent.parent
 DATA = BASE / "data"
 MODELS = BASE / "models"
 SETTINGS_FILE = DATA / "settings.json"

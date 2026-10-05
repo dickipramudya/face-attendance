@@ -1,6 +1,7 @@
 """Quick check: open both cameras, time capture + face detection + recognition."""
 import time, cv2, numpy as np, sys
-M = "/opt/absensi/models/"
+from pathlib import Path
+M = str(Path(__file__).resolve().parent.parent / "models") + "/"
 det = cv2.FaceDetectorYN.create(M + "face_detection_yunet_2023mar.onnx", "", (640, 360), 0.8, 0.3, 5000)
 rec = cv2.FaceRecognizerSF.create(M + "face_recognition_sface_2021dec.onnx", "")
 cv2.setNumThreads(4)
